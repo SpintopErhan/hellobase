@@ -1,15 +1,25 @@
-// next.config.mjs
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  reactStrictMode: true,
-  transpilePackages: [
-    'wagmi',
-    'viem',
-    '@wagmi/connectors', // injected konnektörü için gerekli
-    '@tanstack/react-query',
-    '@wagmi/core',
-    // WalletConnect paketlerini buraya eklemiyoruz, çünkü kurmadık
-  ],
-};
+// next.config.ts
+    import type { NextConfig } from 'next';
 
-export default nextConfig;
+    const nextConfig: NextConfig = {
+      reactStrictMode: true,
+      transpilePackages: [
+        'wagmi',
+        'viem',
+        '@wagmi/connectors',
+        '@tanstack/react-query',
+        '@wagmi/core',
+        '@walletconnect/modal-html',       // Bu paketler Wagmi'nin iç bağımlılığıdır
+        '@walletconnect/ethereum-provider', // Transpile etmek sorunu çözebilir
+        '@walletconnect/utils',
+        '@walletconnect/jsonrpc-utils',
+        'multiformats',
+        'lru-cache',
+        'p-retry',
+        'eventemitter3',
+        'p-jvi',
+        'porto',                          // En inatçı sorunlar için buraya eklemiştik
+      ],
+    };
+
+    export default nextConfig;
