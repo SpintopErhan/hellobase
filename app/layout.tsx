@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 
    // 👇 BASE APP ID BURAYA EKLENİYOR 👇
   other: {
-    'base:app_id': '6944e10cd19763ca26ddc4d2',
+    'base:app_id': '694a54e84d3a403912ed7c66',
   },
 
 };
