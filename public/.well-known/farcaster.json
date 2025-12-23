@@ -1,0 +1,25 @@
+{
+  "frame": {
+    "name": "HelloBase",
+    "version": "1",
+    "iconUrl": "https://hellobase.vercel.app/icon.png",
+    "homeUrl": "https://hellobase.vercel.app",
+    "imageUrl": "https://hellobase.vercel.app/image.png",
+    "splashImageUrl": "https://hellobase.vercel.app/splash.png",
+    "splashBackgroundColor": "#EEF0F3",
+    "webhookUrl": "https://hellobase.vercel.app/api/webhook",
+    "subtitle": "Demo app for testing Baseapp",
+    "description": "Demo app for testing Baseapp",
+    "primaryCategory": "social",
+    "tags": [
+      "social",
+      "test",
+      "demo"
+    ]
+  },
+  "accountAssociation": {
+    "header": "eyJmaWQiOjQ4MjAxMSwidHlwZSI6ImF1dGgiLCJrZXkiOiIweGExREFERWIwZDFmYWUyQTExQmNjMmQ3NWYzY0ZhYjA4ODQyYUVCYTUifQ",
+    "payload": "eyJkb21haW4iOiJoZWxsb2Jhc2UudmVyY2VsLmFwcCJ9",
+    "signature": "dvUM1+ZjRNi+97vlFfA6TWFROWNzoD8TZ9YwgE1ZDqRc6Iqs3YSRzdjPirxwQnUm8XkMqZ0CcQburEnPrVPCERw="
+  }
+}

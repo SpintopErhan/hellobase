@@ -19,7 +19,7 @@ interface UseFarcasterMiniAppResult {
 // addMiniApp çağrısının başarısız olduğunu gösteren tipik TypeError mesajını sabit olarak tanımlayalım
 const ADD_MINI_APP_FAILURE_TYPE_ERROR = "Cannot read properties of undefined (reading 'result')";
 // Uygulamanın kendi URL'sini bir sabit olarak tanımlayalım
-const APP_EMBED_URL = "https://helloworld-six-omega.vercel.app/";
+const APP_EMBED_URL = "https://hellobase.vercel.app/";
 
 export const useFarcasterMiniApp = (): UseFarcasterMiniAppResult => {
   const [user, setUser] = useState<FarcasterUser>(ANONYMOUS_USER);
