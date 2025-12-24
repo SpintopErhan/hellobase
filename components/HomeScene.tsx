@@ -1,11 +1,11 @@
 "use client";
 
-// ÖNEMLİ: Next.js'e bu sayfayı build sırasında render etmemesini söyler.
 export const dynamic = "force-dynamic";
 
 import { useState, FormEvent, useEffect } from "react";
 import { useFarcasterMiniApp } from "@/hooks/useFarcasterMiniApp";
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
+import { parseEther } from 'viem'; // Miktarı ayarlamak için gerekli
 
 export default function Home() {
   const { user, status, error, composeCast } = useFarcasterMiniApp();
@@ -13,12 +13,15 @@ export default function Home() {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
 
+  // --- Bağış (Transaction) Hook'ları ---
+  const { data: hash, sendTransaction, isPending: isTxPending, error: txError } = useSendTransaction();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
+
   const [castText, setCastText] = useState<string>("");
   const [isCasting, setIsCasting] = useState<boolean>(false);
   const [castError, setCastError] = useState<string | null>(null);
   const [castSuccess, setCastSuccess] = useState<boolean>(false);
   
-  // Hydration hatasını önlemek için istemci kontrolü
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -30,7 +33,6 @@ export default function Home() {
       setCastError("Please enter some text.");
       return;
     }
-
     setCastError(null);
     setCastSuccess(false);
     setIsCasting(true);
@@ -40,14 +42,20 @@ export default function Home() {
       setCastText("");
       setCastSuccess(true);
     } catch (err: unknown) {
-      console.error("Error casting:", err);
       setCastError(err instanceof Error ? err.message : "An unknown error occurred.");
     } finally {
       setIsCasting(false);
     }
   };
 
-  // Build sırasında veya ilk yüklemede sunucu/istemci uyumsuzluğunu önler
+  // --- Bağış Fonksiyonu ---
+  const handleDonate = () => {
+    sendTransaction({
+      to: '0xa1DADEb0d1fae2A11Bcc2d75f3cFab08842aEBa5', // BURAYI DEĞİŞTİR: Bağışın gideceği adres
+      value: parseEther('0.0001'), // Test için küçük bir miktar (0.0001 ETH)
+    });
+  };
+
   if (!mounted) return null;
 
   return (
@@ -64,19 +72,36 @@ export default function Home() {
         )}
       </div>
 
-      <div className="mb-8 p-4 bg-gray-700 rounded-lg shadow-md w-full max-w-md text-center">
-        <h2 className="text-xl font-semibold mb-2 text-purple-400">Base Wallet</h2>
+      {/* --- Cüzdan ve Bağış Bölümü --- */}
+      <div className="mb-8 p-4 bg-gray-700 rounded-lg shadow-md w-full max-w-md text-center border border-purple-500/30">
+        <h2 className="text-xl font-semibold mb-2 text-purple-400">Base Wallet & Support</h2>
         {isConnected ? (
-          <>
+          <div className="flex flex-col gap-3">
             <p className="text-green-300">Connected to {connector?.name}</p>
-            <p className="text-sm break-all">Address: <span className="font-mono text-[12px]">{address}</span></p>
+            <p className="text-[10px] font-mono break-all bg-black/30 p-2 rounded">{address}</p>
+            
+            {/* Bağış Butonu */}
+            <button
+              onClick={handleDonate}
+              disabled={isTxPending || isConfirming}
+              className={`py-3 px-4 rounded-md font-bold text-white transition-all ${
+                isTxPending || isConfirming ? "bg-gray-600 cursor-wait" : "bg-green-600 hover:bg-green-700 shadow-lg shadow-green-900/20"
+              }`}
+            >
+              {isTxPending ? "Confirm in Wallet..." : isConfirming ? "Processing TX..." : "Donate 0.0001 ETH"}
+            </button>
+
+            {/* İşlem Durum Mesajları */}
+            {isConfirmed && <p className="text-xs text-green-400 font-bold">🎉 Donation Successful!</p>}
+            {txError && <p className="text-xs text-red-400">Error: {txError.message.split('.')[0]}</p>}
+
             <button
               onClick={() => disconnect()}
-              className="mt-3 py-2 px-4 rounded-md bg-red-600 hover:bg-red-700 text-white font-bold"
+              className="mt-2 text-xs text-gray-400 hover:text-red-400 underline"
             >
-              Disconnect
+              Disconnect Wallet
             </button>
-          </>
+          </div>
         ) : (
           <div className="flex flex-wrap justify-center gap-2">
             {connectors.map((conn) => (
@@ -92,7 +117,7 @@ export default function Home() {
         )}
       </div>
 
-      <div className="w-full max-w-md bg-gray-800 p-6 rounded-lg shadow-lg">
+      <div className="w-full max-w-md bg-gray-800 p-6 rounded-lg shadow-lg border border-blue-500/20">
         <h2 className="text-2xl font-semibold mb-4 text-center">Create New Cast</h2>
         <form onSubmit={handleComposeCast} className="flex flex-col gap-4">
           <textarea
