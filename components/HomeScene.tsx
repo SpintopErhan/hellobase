@@ -4,157 +4,141 @@ export const dynamic = "force-dynamic";
 
 import { useState, FormEvent, useEffect } from "react";
 import { useFarcasterMiniApp } from "@/hooks/useFarcasterMiniApp";
-import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
+import { 
+  useAccount, 
+  useConnect, 
+  useDisconnect, 
+  useSendTransaction, 
+  useWaitForTransactionReceipt,
+  useWriteContract 
+} from 'wagmi';
 import { parseEther } from 'viem';
 
+// Replace with your Remix Contract Address
+const NFT_CONTRACT_ADDRESS = "0xSizinKontratAdresinizBuraya"; 
+
 export default function Home() {
-  const { user, status, error, composeCast } = useFarcasterMiniApp();
+  const { user, status, composeCast } = useFarcasterMiniApp();
   const { address, isConnected, connector } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
 
-  // --- Bağış (Transaction) Hook'ları ---
-  const { data: hash, sendTransaction, isPending: isTxPending, error: txError } = useSendTransaction();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
+  // --- Donation Hooks ---
+  const { data: donateHash, sendTransaction, isPending: isDonatePending } = useSendTransaction();
+  const { isSuccess: isDonateConfirmed } = useWaitForTransactionReceipt({ hash: donateHash });
 
-  const [castText, setCastText] = useState<string>("");
-  const [isCasting, setIsCasting] = useState<boolean>(false);
-  const [castError, setCastError] = useState<string | null>(null);
-  const [castSuccess, setCastSuccess] = useState<boolean>(false);
-  
+  // --- MINT Hooks ---
+  const { data: mintHash, writeContract: mintNFT, isPending: isMintPending } = useWriteContract();
+  const { isLoading: isMintConfirming, isSuccess: isMintConfirmed } = useWaitForTransactionReceipt({ hash: mintHash });
+
   const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  // Auto-Cast when DONATION is confirmed
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (isDonateConfirmed) {
+      composeCast(`I just donated to HelloBase! 🚀\nTX: https://sepolia.basescan.org/tx/${donateHash}`);
+    }
+  }, [isDonateConfirmed, donateHash, composeCast]);
 
-  // --- KRİTİK EKLEME: İşlem Onaylandığında Cast Penceresini Aç ---
+  // Auto-Cast when MINT is confirmed
   useEffect(() => {
-    if (isConfirmed) {
-      console.log("İşlem onaylandı, Cast taslağı hazırlanıyor...");
-      
-      // Kullanıcıya işlem biter bitmez Cast penceresini açıyoruz
-      const triggerSuccessCast = async () => {
-        try {
-          await composeCast(`HelloBase üzerinden az önce bağış yaptım! 🚀 \n\nİşlem Özeti: https://basescan.org/tx/${hash}`);
-        } catch (err) {
-          console.error("Otomatik Cast penceresi açılamadı:", err);
-        }
-      };
-
-      triggerSuccessCast();
+    if (isMintConfirmed) {
+      composeCast(`I just minted a free NFT from the HelloBase Collection! 🎨🔥\n\nCheck it out: https://sepolia.basescan.org/tx/${mintHash}`);
     }
-  }, [isConfirmed, hash, composeCast]);
+  }, [isMintConfirmed, mintHash, composeCast]);
 
-  const handleComposeCast = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!castText.trim()) return;
-    setIsCasting(true);
-    try {
-      await composeCast(castText);
-      setCastText("");
-      setCastSuccess(true);
-    } catch (err: any) {
-      setCastError(err.message);
-    } finally {
-      setIsCasting(false);
-    }
-  };
-
-  const handleDonate = () => {
-    sendTransaction({
-      to: '0xa1DADEb0d1fae2A11Bcc2d75f3cFab08842aEBa5', // Kendi adresinizi buraya yazın
-      value: parseEther('0.0001'),
+  const handleMint = () => {
+    mintNFT({
+      address: NFT_CONTRACT_ADDRESS as `0x${string}`,
+      abi: [{ name: 'mint', type: 'function', stateMutability: 'nonpayable', inputs: [] }],
+      functionName: 'mint',
     });
   };
 
   if (!mounted) return null;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-8 bg-gray-900 text-white">
-      <h1 className="text-4xl font-bold mb-8 text-blue-400">Farcaster MiniApp</h1>
+    <div className="flex min-h-screen flex-col items-center p-6 bg-black text-white font-sans">
+      <h1 className="text-3xl font-black mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 italic">
+        HELLO BASE
+      </h1>
 
-      {/* Kullanıcı Bilgisi */}
-      <div className="mb-6 text-lg text-center">
-        {status === "loaded" && (
-          <p>Welcome, <span className="font-semibold text-green-400">{user.displayName}</span></p>
-        )}
-      </div>
+      {status === "loading" && <p className="text-zinc-500 animate-pulse">Initializing SDK...</p>}
 
-      {/* Cüzdan ve Bağış Kartı */}
-      <div className="mb-8 p-6 bg-gray-800 rounded-xl shadow-2xl w-full max-w-md text-center border border-blue-500/20">
-        <h2 className="text-xl font-semibold mb-4 text-purple-400">Onchain Action</h2>
+      {status === "loaded" && (
+        <div className="mb-6 px-4 py-2 bg-white/5 rounded-full border border-white/10 text-xs">
+          Logged in as: <span className="text-blue-400 font-bold">@{user.username}</span>
+        </div>
+      )}
+
+      <div className="w-full max-w-sm flex flex-col gap-6">
         
-        {isConnected ? (
-          <div className="flex flex-col gap-4">
-            <div className="bg-black/40 p-3 rounded-lg text-[10px] font-mono break-all border border-white/10">
-              {address}
+        {/* WALLET & ACTIONS SECTION */}
+        <div className="p-5 bg-zinc-900 rounded-3xl border border-zinc-800 shadow-2xl">
+          <h2 className="text-sm font-semibold text-zinc-400 mb-4 uppercase tracking-widest text-center">Wallet Actions</h2>
+          
+          {!isConnected ? (
+            <div className="flex flex-col gap-2">
+              {connectors.map((conn) => (
+                <button 
+                  key={conn.uid} 
+                  onClick={() => connect({ connector: conn })} 
+                  className="w-full py-3 bg-white text-black font-bold rounded-2xl hover:bg-zinc-200 transition-colors"
+                >
+                  Connect {conn.name}
+                </button>
+              ))}
             </div>
-
-            <button
-              onClick={handleDonate}
-              disabled={isTxPending || isConfirming}
-              className={`py-3 px-4 rounded-lg font-bold text-white transition-all transform active:scale-95 ${
-                isTxPending || isConfirming 
-                  ? "bg-gray-600 cursor-wait" 
-                  : "bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 shadow-lg shadow-green-900/40"
-              }`}
-            >
-              {isTxPending ? "Cüzdan Onayı Bekleniyor..." : 
-               isConfirming ? "İşlem Onaylanıyor..." : 
-               "0.0001 ETH Bağışla"}
-            </button>
-
-            {isConfirmed && (
-              <div className="animate-bounce text-sm text-green-400 font-bold mt-2">
-                ✅ İşlem Başarılı! Cast penceresi açılıyor...
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className="text-center p-3 bg-black/50 rounded-2xl border border-white/5">
+                <p className="text-[10px] text-zinc-500 font-mono break-all">{address}</p>
               </div>
-            )}
-            
-            {txError && (
-              <p className="text-xs text-red-400 bg-red-900/20 p-2 rounded">
-                Hata: {txError.message.split('.')[0]}
-              </p>
-            )}
+              
+              <div className="grid grid-cols-1 gap-3">
+                {/* Mint Button - Primary Action */}
+                <button 
+                  onClick={handleMint}
+                  disabled={isMintPending || isMintConfirming}
+                  className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 rounded-2xl text-sm font-black uppercase shadow-lg shadow-purple-500/20 disabled:opacity-50 transition-all active:scale-95"
+                >
+                  {isMintPending ? "Confirming..." : isMintConfirming ? "Minting NFT..." : "Claim Free NFT"}
+                </button>
 
-            <button onClick={() => disconnect()} className="text-xs text-gray-500 hover:text-red-400 underline transition-colors">
-              Disconnect Wallet
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-gray-400 mb-2">İşlem yapmak için cüzdan bağla</p>
-            {connectors.map((conn) => (
-              <button
-                key={conn.uid}
-                onClick={() => connect({ connector: conn })}
-                className="py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 font-bold transition-colors"
+                {/* Donate Button - Secondary Action */}
+                <button 
+                  onClick={() => sendTransaction({ to: '0xSizinAdresiniz', value: parseEther('0.0001') })}
+                  disabled={isDonatePending}
+                  className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-xs font-bold text-zinc-300 transition-all"
+                >
+                  {isDonatePending ? "Sending..." : "Donate 0.0001 ETH"}
+                </button>
+              </div>
+
+              {isMintConfirmed && (
+                <p className="text-[10px] text-green-400 font-bold text-center animate-bounce">
+                  ✨ Success! Opening Cast composer...
+                </p>
+              )}
+
+              <button 
+                onClick={() => disconnect()} 
+                className="mt-2 text-[10px] text-zinc-600 hover:text-red-400 transition-colors underline decoration-zinc-800"
               >
-                {conn.name} ile Bağlan
+                Disconnect Wallet
               </button>
-            ))}
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
 
-      {/* Manuel Cast Alanı */}
-      <div className="w-full max-w-md bg-gray-800 p-6 rounded-xl border border-white/5 shadow-xl">
-        <h3 className="text-lg font-semibold mb-4">Mesaj Gönder</h3>
-        <form onSubmit={handleComposeCast} className="flex flex-col gap-3">
-          <textarea
-            className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-500"
-            rows={3}
-            placeholder="Neler oluyor?"
-            value={castText}
-            onChange={(e) => setCastText(e.target.value)}
-          />
-          <button
-            type="submit"
-            disabled={isCasting}
-            className="py-2 px-6 rounded-lg bg-blue-500 hover:bg-blue-400 font-bold disabled:bg-gray-700 transition-all"
-          >
-            {isCasting ? "Gönderiliyor..." : "Cast At"}
-          </button>
-        </form>
+        {/* INFO FOOTER */}
+        <div className="text-center">
+          <p className="text-zinc-600 text-[10px]">
+            Powered by <span className="text-zinc-400">Base Sepolia</span> & <span className="text-zinc-400">Farcaster v2</span>
+          </p>
+        </div>
+
       </div>
     </div>
   );
