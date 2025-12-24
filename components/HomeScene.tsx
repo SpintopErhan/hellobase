@@ -18,7 +18,7 @@ import {
 import { parseEther } from 'viem';
 import { base, baseSepolia } from 'wagmi/chains';
 
-const NFT_CONTRACT_ADDRESS = "0xFd3001d56fEA038ABfF8E92c31ee187450Ad7FDB";
+const NFT_CONTRACT_ADDRESS = "0x3125bB022ea7c7175BadC0e6adECC8E86101c88C";
 const DONATION_ADDRESS = "0x0d69307D7D637E2f7196DE74bE4bDEc0A1C25427";
 
 export default function Home() {
