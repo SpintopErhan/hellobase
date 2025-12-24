@@ -15,7 +15,7 @@ import {
 import { parseEther } from 'viem';
 
 // Replace with your Remix Contract Address
-const NFT_CONTRACT_ADDRESS = "0xSizinKontratAdresinizBuraya"; 
+const NFT_CONTRACT_ADDRESS = "0xFd3001d56fEA038ABfF8E92c31ee187450Ad7FDB"; 
 
 export default function Home() {
   const { user, status, composeCast } = useFarcasterMiniApp();
@@ -108,7 +108,7 @@ export default function Home() {
 
                 {/* Donate Button - Secondary Action */}
                 <button 
-                  onClick={() => sendTransaction({ to: '0xSizinAdresiniz', value: parseEther('0.0001') })}
+                  onClick={() => sendTransaction({ to: '0x0d69307D7D637E2f7196DE74bE4bDEc0A1C25427', value: parseEther('0.0001') })}
                   disabled={isDonatePending}
                   className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-xs font-bold text-zinc-300 transition-all"
                 >
