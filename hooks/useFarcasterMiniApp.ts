@@ -29,87 +29,53 @@ export const useFarcasterMiniApp = (): UseFarcasterMiniAppResult => {
   const hasInitializedSDKRef = useRef(false);
 
   useEffect(() => {
-    const init = async () => {
-      if (hasInitializedSDKRef.current) {
-        console.log("[FarcasterSDK] init atlandı: Zaten başlatma denenmiş.");
-        return;
+   const init = async () => {
+  if (hasInitializedSDKRef.current) return;
+  if (!sdk) return;
+
+  hasInitializedSDKRef.current = true;
+  setStatus("loading");
+
+  try {
+    // 1. Önce SDK'yı hazırla
+    console.log("[FarcasterSDK] Ready çağrılıyor...");
+    await sdk.actions.ready({ disableNativeGestures: true });
+
+    // 2. Base App uyumluluğu için Context'i al (Bağlamı bilmek hata yönetimini kolaylaştırır)
+    const context = await sdk.context;
+    console.log("[FarcasterSDK] Context:", context);
+
+    // 3. addMiniApp çağrısı (Base App burada 'compatibility' modunda devreye girer)
+    try {
+      console.log("[FarcasterSDK] addMiniApp deneniyor...");
+      // Base App bu çağrıyı yakalayıp kendi "Add" popup'ını açacaktır.
+      const result = await sdk.actions.addMiniApp();
+      console.log("[FarcasterSDK] addMiniApp başarılı:", result);
+    } catch (addErr: any) {
+      // Base App içinde 'result' okunamama hatasını burada yutuyoruz ki uygulama çökmesin.
+      if (addErr?.message?.includes('result') || addErr instanceof TypeError) {
+        console.warn("[FarcasterSDK] Base App uyumluluk uyarısı: Add işlemi cüzdan tarafından yönetiliyor.");
+      } else {
+        console.error("[FarcasterSDK] addMiniApp hatası:", addErr);
       }
+    }
 
-      if (!sdk) {
-        const sdkError = new Error("Farcaster SDK bulunamadı veya yüklenemedi.");
-        setError(sdkError);
-        setStatus("error");
-        console.error("[FarcasterSDK] Hata: SDK objesi yok.", sdkError);
-        return;
-      }
+    // 4. Kullanıcı verilerini ayarla
+    if (context?.user) {
+      setUser({
+        fid: context.user.fid,
+        username: context.user.username || "anonymous",
+        displayName: context.user.displayName || context.user.username || `User ${context.user.fid}`,
+      });
+    }
 
-      hasInitializedSDKRef.current = true;
-      setStatus("loading");
-      setError(null);
-
-      let contextFetched = false;
-
-      try {
-        console.log("[FarcasterSDK] Başlatılıyor: sdk.actions.ready() bekleniyor...");
-        await sdk.actions.ready({
-            // disableNativeGestures bayrağını true yaparak yerel kaydırma/kapatma hareketlerini devre dışı bırakıyoruz.
-            disableNativeGestures: true 
-        });
-        console.log("[FarcasterSDK] Başarılı: sdk.actions.ready() tamamlandı.");
-
-        try {
-          console.log("[FarcasterSDK] Başlatılıyor: sdk.actions.addMiniApp() bekleniyor...");
-          await sdk.actions.addMiniApp();
-          console.log("[FarcasterSDK] Başarılı: sdk.actions.addMiniApp() tamamlandı.");
-        } catch (addMiniAppErr: unknown) {
-          // Eğer hata spesifik bir TypeError ise (Farcaster client dışında çalışıyor veya kullanıcı reddetti)
-          if (addMiniAppErr instanceof TypeError && addMiniAppErr.message?.includes(ADD_MINI_APP_FAILURE_TYPE_ERROR)) {
-            console.warn(
-              "[FarcasterSDK] Uyarı: `addMiniApp` çağrısı başarısız oldu (Farcaster client dışında çalışıyor veya kullanıcı reddetti). Anonim olarak devam ediliyor.",
-              addMiniAppErr instanceof Error ? addMiniAppErr.message : String(addMiniAppErr)
-            );
-          } else {
-            // Farklı veya daha kritik bir hata ise, bunu ele alalım
-            console.warn("[FarcasterSDK] Uyarı: `addMiniApp` bilinmeyen bir nedenle başarısız oldu. Uygulama devam edecek.", addMiniAppErr);
-          }
-        }
-
-        type FarcasterSDKContext = Awaited<typeof sdk.context>;
-        console.log("[FarcasterSDK] Bağlam yükleniyor: sdk.context bekleniyor...");
-        const context: FarcasterSDKContext | undefined = await sdk.context;
-        console.log("[FarcasterSDK] Bağlam yüklendi:", context);
-        contextFetched = true;
-
-        if (context?.user?.fid) {
-          setUser({
-            fid: context.user.fid,
-            username: context.user.username || "anonymous",
-            displayName: context.user.displayName || context.user.username || `User ${context.user.fid}`,
-          });
-          console.log("[FarcasterSDK] Kullanıcı bilgisi başarıyla alındı:", context.user.username);
-        } else {
-          console.warn("[FarcasterSDK] Uyarı: Kullanıcı bilgisi alınamadı veya kullanıcı izin vermedi. Varsayılan kullanıcı (anonim) kullanılıyor.");
-          setUser(ANONYMOUS_USER); // Anonim kullanıcı olarak ayarla
-        }
-        
-        setStatus("loaded"); // Her durumda SDK'nın "loaded" olduğunu işaretle
-        console.log("[FarcasterSDK] SDK başlatma işlemi tamamlandı. Durum: loaded.");
-
-      } catch (err: unknown) {
-        // Bu catch bloğu sadece `sdk.actions.ready()` veya `sdk.context` gibi
-        // gerçekten kritik olan SDK bileşenlerinde oluşan hataları yakalamalı.
-        // `addMiniApp` hataları artık buraya düşmeyecek.
-        console.error("[FarcasterSDK] Kritik başlatma hatası oluştu:", err);
-        console.error("[FarcasterSDK] Tam hata objesi:", err instanceof Error ? err.message : String(err));
-        setError(err instanceof Error ? err : new Error(String(err)));
-        setStatus("error");
-        console.log("[FarcasterSDK] SDK başlatma işlemi başarısız oldu. Durum: error.");
-
-        if (!contextFetched) {
-          setUser(ANONYMOUS_USER);
-        }
-      }
-    };
+    setStatus("loaded");
+  } catch (err: unknown) {
+    console.error("[FarcasterSDK] Kritik hata:", err);
+    setError(err instanceof Error ? err : new Error(String(err)));
+    setStatus("error");
+  }
+};
 
     init();
   }, []); // Bağımlılık dizisi boş kalmalı, init sadece bir kez çalışmalı.
